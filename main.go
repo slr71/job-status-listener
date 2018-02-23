@@ -1,0 +1,55 @@
+package main
+
+import (
+	_ "expvar"
+	"flag"
+	"net/http"
+
+	"github.com/cyverse-de/configurate"
+	"github.com/spf13/viper"
+
+	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
+)
+
+var log = logrus.WithFields(logrus.Fields{
+	"service": "job-status-listener",
+	"art-id":  "job-status-listener",
+	"group":   "org.cyverse",
+})
+
+var (
+	cfgPath = flag.String("config", "", "Path to the configuration file.")
+	cfg     *viper.Viper
+)
+
+func init() {
+	flag.Parse()
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+}
+
+func loadConfig(cfgPath string) {
+	var err error
+	cfg, err = configurate.Init(cfgPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func newRouter() *mux.Router {
+	r := mux.NewRouter()
+	r.Handle("/debug/vars", http.DefaultServeMux)
+
+	return r
+}
+
+func main() {
+	log.Info("Starting up the job-status-listener service.")
+	loadConfig(*cfgPath)
+
+	r := newRouter()
+
+	listenPortSpec := ":" + "60000"
+	log.Infof("Listening on %s", listenPortSpec)
+	log.Fatal(http.ListenAndServe(listenPortSpec, r))
+}
