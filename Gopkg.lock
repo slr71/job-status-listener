@@ -8,6 +8,12 @@
   revision = "9b512d37328e6508a6c9830533f20c4b41762a2c"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/cyverse-de/messaging"
+  packages = ["."]
+  revision = "ef55762d9a206c3ea512cc5b2ef233cd0ed0dd08"
+
+[[projects]]
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
@@ -100,6 +106,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/streadway/amqp"
+  packages = ["."]
+  revision = "8e4aba63da9fc5571e01c6a45dc809a58cbc5a68"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   revision = "49796115aa4b964c318aad4f3084fdb41e9aa067"
@@ -135,6 +147,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "655f5b1fc6dadf05e0ed7139291a7b4fe3275acd9daf4b2b018b0dfff40aa0e5"
+  inputs-digest = "9422818d537f6e7ecb39077c71b3841e740f5f97ece3c3345b9050f2d2b61922"
   solver-name = "gps-cdcl"
   solver-version = 1
