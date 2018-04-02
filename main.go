@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	_ "expvar"
 	"flag"
-	"net"
 	"net/http"
 
 	"github.com/cyverse-de/configurate"
@@ -36,14 +35,6 @@ type JobUpdatePublisher interface {
 }
 
 func running(client JobUpdatePublisher, job *messaging.JobDetails, hostname string, msg string) (*messaging.UpdateMessage, error) {
-	parsedIP := net.ParseIP(hostname)
-	if parsedIP == nil {
-		_, err := net.LookupIP(hostname)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	updateMessage := &messaging.UpdateMessage{
 		Job:     *job,
 		State:   messaging.RunningState,
