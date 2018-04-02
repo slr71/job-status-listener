@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	_ "expvar"
 	"flag"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/cyverse-de/configurate"
 	"github.com/spf13/viper"
@@ -34,10 +36,10 @@ type JobUpdatePublisher interface {
 	PublishJobUpdate(m *messaging.UpdateMessage) error
 }
 
-func running(client JobUpdatePublisher, job *messaging.JobDetails, hostname string, msg string) (*messaging.UpdateMessage, error) {
+func update(client JobUpdatePublisher, state messaging.JobState, jobId string, hostname string, msg string) (*messaging.UpdateMessage, error) {
 	updateMessage := &messaging.UpdateMessage{
-		Job:     *job,
-		State:   messaging.RunningState,
+		Job:     messaging.JobDetails{InvocationID: jobId},
+		State:   state,
 		Message: msg,
 		Sender:  hostname,
 	}
@@ -47,21 +49,41 @@ func running(client JobUpdatePublisher, job *messaging.JobDetails, hostname stri
 		log.Error(err)
 		return nil, err
 	}
-	log.Info(msg)
+	log.Infof("%s (%s) [%s]: %s", jobId, state, hostname, msg)
 	return updateMessage, nil
 }
 
 type MessagePost struct {
 	Hostname string
 	Message  string
-	Job      *messaging.JobDetails
+	State    string
 }
 
-func postRunning(w http.ResponseWriter, r *http.Request) {
+func getState(state string) (messaging.JobState, error) {
+	switch strings.ToLower(state) {
+	case "submitted":
+		return messaging.SubmittedState, nil
+	case "running":
+		return messaging.RunningState, nil
+	case "completed":
+		return messaging.SucceededState, nil
+	case "succeeded":
+		return messaging.SucceededState, nil
+	case "failed":
+		return messaging.FailedState, nil
+	default:
+		return "", fmt.Errorf("Unknown job state: %s", state)
+	}
+}
+
+func postUpdate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	out := json.NewEncoder(w)
 
 	var updateMessage MessagePost
+
+	vars := mux.Vars(r)
+	jobId := vars["uuid"]
 
 	err := json.NewDecoder(r.Body).Decode(&updateMessage)
 	if err != nil {
@@ -73,7 +95,17 @@ func postRunning(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg, err := running(client, updateMessage.Job, updateMessage.Hostname, updateMessage.Message)
+	state, err := getState(updateMessage.State)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Error(err)
+		out.Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	msg, err := update(client, state, jobId, updateMessage.Hostname, updateMessage.Message)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Error(err)
@@ -101,7 +133,7 @@ func loadConfig(cfgPath string) {
 func newRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.Handle("/debug/vars", http.DefaultServeMux)
-	r.Path("/running").Methods("POST").HandlerFunc(postRunning)
+	r.Path("/{uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/status").Methods("POST").HandlerFunc(postUpdate)
 
 	return r
 }
