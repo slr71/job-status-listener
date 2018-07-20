@@ -13,7 +13,7 @@ RUN go install -v -ldflags "-X main.appver=$version -X main.gitref=$git_commit" 
 
 EXPOSE 60000
 LABEL org.label-schema.vcs-ref="$git_commit"
-LABEL org.label-schema.vcs-url="https://github.com/cyverse-de/templeton"
+LABEL org.label-schema.vcs-url="https://github.com/cyverse-de/job-status-listener"
 LABEL org.label-schema.version="$descriptive_version"
 ENTRYPOINT ["job-status-listener"]
 CMD ["--help"]
