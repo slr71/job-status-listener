@@ -28,9 +28,9 @@ var (
 	cfg     *viper.Viper
 )
 
-func update(publisher JobUpdatePublisher, state messaging.JobState, jobId string, hostname string, msg string) (*messaging.UpdateMessage, error) {
+func update(publisher JobUpdatePublisher, state messaging.JobState, jobID string, hostname string, msg string) (*messaging.UpdateMessage, error) {
 	updateMessage := &messaging.UpdateMessage{
-		Job:     messaging.JobDetails{InvocationID: jobId},
+		Job:     messaging.JobDetails{InvocationID: jobID},
 		State:   state,
 		Message: msg,
 		Sender:  hostname,
@@ -38,7 +38,7 @@ func update(publisher JobUpdatePublisher, state messaging.JobState, jobId string
 
 	err := publisher.PublishJobUpdate(updateMessage)
 	if err == nil {
-		log.Infof("%s (%s) [%s]: %s", jobId, state, hostname, msg)
+		log.Infof("%s (%s) [%s]: %s", jobID, state, hostname, msg)
 		return updateMessage, nil
 	}
 
@@ -56,7 +56,7 @@ func update(publisher JobUpdatePublisher, state messaging.JobState, jobId string
 	// Attempt to record the message one more time.
 	err = publisher.PublishJobUpdate(updateMessage)
 	if err == nil {
-		log.Infof("%s (%s) [%s]: %s", jobId, state, hostname, msg)
+		log.Infof("%s (%s) [%s]: %s", jobID, state, hostname, msg)
 		return updateMessage, nil
 	}
 
@@ -64,6 +64,7 @@ func update(publisher JobUpdatePublisher, state messaging.JobState, jobId string
 	return nil, err
 }
 
+// MessagePost describes the structure of the job status update request body.
 type MessagePost struct {
 	Hostname string
 	Message  string
@@ -94,13 +95,13 @@ func postUpdate(publisher JobUpdatePublisher, w http.ResponseWriter, r *http.Req
 	var updateMessage MessagePost
 
 	vars := mux.Vars(r)
-	jobId := vars["uuid"]
+	jobID := vars["uuid"]
 
 	err := json.NewDecoder(r.Body).Decode(&updateMessage)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Error(err)
-		out.Encode(map[string]string{
+		_ = out.Encode(map[string]string{
 			"error": err.Error(),
 		})
 		return
@@ -110,22 +111,22 @@ func postUpdate(publisher JobUpdatePublisher, w http.ResponseWriter, r *http.Req
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Error(err)
-		out.Encode(map[string]string{
+		_ = out.Encode(map[string]string{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	msg, err := update(publisher, state, jobId, updateMessage.Hostname, updateMessage.Message)
+	msg, err := update(publisher, state, jobID, updateMessage.Hostname, updateMessage.Message)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Error(err)
-		out.Encode(map[string]string{
+		_ = out.Encode(map[string]string{
 			"error": err.Error(),
 		})
 		log.Fatal("failed to record a valid job status update - aborting")
 	}
-	out.Encode(msg)
+	_ = out.Encode(msg)
 }
 
 func init() {

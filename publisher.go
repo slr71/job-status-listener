@@ -12,6 +12,8 @@ type JobUpdatePublisher interface {
 	Close()
 }
 
+// DefaultJobUpdatePublisher provides a wrapper around messaging.Client that adds support for
+// reestablishing stale connections.
 type DefaultJobUpdatePublisher struct {
 	uri      string
 	exchange string
@@ -24,11 +26,15 @@ func newMessagingClient(uri, exchange string, reconnect bool) (*messaging.Client
 		return nil, err
 	}
 
-	client.SetupPublishing(exchange)
+	err = client.SetupPublishing(exchange)
+	if err != nil {
+		return nil, err
+	}
 
 	return client, nil
 }
 
+// NewDefaultJobUpdatePublisher returns a new instance of DefaultJobUpdatePublisher.
 func NewDefaultJobUpdatePublisher(uri, exchange string) (*DefaultJobUpdatePublisher, error) {
 	client, err := newMessagingClient(uri, exchange, true)
 	if err != nil {
@@ -43,10 +49,12 @@ func NewDefaultJobUpdatePublisher(uri, exchange string) (*DefaultJobUpdatePublis
 	return publisher, nil
 }
 
+// PublishJobUpdate simply forwards the function call to messaging.Client.PublishJobUpdate.
 func (c *DefaultJobUpdatePublisher) PublishJobUpdate(m *messaging.UpdateMessage) error {
 	return c.client.PublishJobUpdate(m)
 }
 
+// Reconnect closes the existing messaging client connection and establishes a new one.
 func (c *DefaultJobUpdatePublisher) Reconnect() error {
 	c.client.Close()
 
@@ -59,6 +67,7 @@ func (c *DefaultJobUpdatePublisher) Reconnect() error {
 	return nil
 }
 
+// Close closes the messaging client connection.
 func (c *DefaultJobUpdatePublisher) Close() {
 	c.client.Close()
 }
