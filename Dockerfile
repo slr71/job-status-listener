@@ -1,4 +1,4 @@
-FROM golang:1.9-alpine
+FROM golang:1.11-alpine
 
 ARG git_commit=unknown
 ARG version="2.9.0"
@@ -9,6 +9,7 @@ LABEL org.cyverse.version="$version"
 LABEL org.cyverse.descriptive-version="$descriptive_version"
 
 COPY . /go/src/github.com/cyverse-de/job-status-listener
+ENV CGO_ENABLED=0
 RUN go install -v -ldflags "-X main.appver=$version -X main.gitref=$git_commit" github.com/cyverse-de/job-status-listener
 
 EXPOSE 60000
