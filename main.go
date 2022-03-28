@@ -1,20 +1,32 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	_ "expvar"
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/cyverse-de/configurate"
+	"github.com/cyverse-de/model"
 	"github.com/spf13/viper"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
-	"github.com/cyverse-de/messaging"
+	"github.com/cyverse-de/messaging/v9"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 var log = logrus.WithFields(logrus.Fields{
@@ -26,17 +38,37 @@ var log = logrus.WithFields(logrus.Fields{
 var (
 	cfgPath = flag.String("config", "", "Path to the configuration file.")
 	cfg     *viper.Viper
+
+	tracerProvider *tracesdk.TracerProvider
 )
 
-func update(publisher JobUpdatePublisher, state messaging.JobState, jobID string, hostname string, msg string) (*messaging.UpdateMessage, error) {
+func jaegerTracerProvider(url string) (*tracesdk.TracerProvider, error) {
+	// Create the Jaeger exporter
+	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
+	if err != nil {
+		return nil, err
+	}
+
+	tp := tracesdk.NewTracerProvider(
+		tracesdk.WithBatcher(exp),
+		tracesdk.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String("job-status-listener"),
+		)),
+	)
+
+	return tp, nil
+}
+
+func update(ctx context.Context, publisher JobUpdatePublisher, state messaging.JobState, jobID string, hostname string, msg string) (*messaging.UpdateMessage, error) {
 	updateMessage := &messaging.UpdateMessage{
-		Job:     messaging.JobDetails{InvocationID: jobID},
+		Job:     &model.Job{InvocationID: jobID},
 		State:   state,
 		Message: msg,
 		Sender:  hostname,
 	}
 
-	err := publisher.PublishJobUpdate(updateMessage)
+	err := publisher.PublishJobUpdate(ctx, updateMessage)
 	if err == nil {
 		log.Infof("%s (%s) [%s]: %s", jobID, state, hostname, msg)
 		return updateMessage, nil
@@ -54,7 +86,7 @@ func update(publisher JobUpdatePublisher, state messaging.JobState, jobID string
 	}
 
 	// Attempt to record the message one more time.
-	err = publisher.PublishJobUpdate(updateMessage)
+	err = publisher.PublishJobUpdate(ctx, updateMessage)
 	if err == nil {
 		log.Infof("%s (%s) [%s]: %s", jobID, state, hostname, msg)
 		return updateMessage, nil
@@ -89,6 +121,7 @@ func getState(state string) (messaging.JobState, error) {
 }
 
 func postUpdate(publisher JobUpdatePublisher, w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	out := json.NewEncoder(w)
 
@@ -117,7 +150,7 @@ func postUpdate(publisher JobUpdatePublisher, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	msg, err := update(publisher, state, jobID, updateMessage.Hostname, updateMessage.Message)
+	msg, err := update(ctx, publisher, state, jobID, updateMessage.Hostname, updateMessage.Message)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Error(err)
@@ -144,6 +177,7 @@ func loadConfig(cfgPath string) {
 
 func newRouter(publisher JobUpdatePublisher) *mux.Router {
 	r := mux.NewRouter()
+	r.Use(otelmux.Middleware("job-status-listener"))
 	r.Handle("/debug/vars", http.DefaultServeMux)
 	r.Path("/{uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/status").Methods("POST").HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -156,6 +190,36 @@ func newRouter(publisher JobUpdatePublisher) *mux.Router {
 
 func main() {
 	log.Info("Starting up the job-status-listener service.")
+
+	otelTracesExporter := os.Getenv("OTEL_TRACES_EXPORTER")
+	if otelTracesExporter == "jaeger" {
+		jaegerEndpoint := os.Getenv("OTEL_EXPORTER_JAEGER_ENDPOINT")
+		if jaegerEndpoint == "" {
+			log.Warn("Jaeger set as OpenTelemetry trace exporter, but no Jaeger endpoint configured.")
+		} else {
+			tp, err := jaegerTracerProvider(jaegerEndpoint)
+			if err != nil {
+				log.Fatal(err)
+			}
+			tracerProvider = tp
+			otel.SetTracerProvider(tp)
+			otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+		}
+	}
+
+	if tracerProvider != nil {
+		tracerCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		defer func(tracerContext context.Context) {
+			ctx, cancel := context.WithTimeout(tracerContext, time.Second*5)
+			defer cancel()
+			if err := tracerProvider.Shutdown(ctx); err != nil {
+				log.Fatal(err)
+			}
+		}(tracerCtx)
+	}
+
 	loadConfig(*cfgPath)
 
 	uri := cfg.GetString("amqp.uri")

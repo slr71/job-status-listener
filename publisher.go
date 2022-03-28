@@ -1,13 +1,15 @@
 package main
 
 import (
-	"github.com/cyverse-de/messaging"
+	"context"
+
+	"github.com/cyverse-de/messaging/v9"
 )
 
 // JobUpdatePublisher is the interface for types that need to publish a job
 // update.
 type JobUpdatePublisher interface {
-	PublishJobUpdate(m *messaging.UpdateMessage) error
+	PublishJobUpdate(ctx context.Context, m *messaging.UpdateMessage) error
 	Reconnect() error
 	Close()
 }
@@ -50,8 +52,8 @@ func NewDefaultJobUpdatePublisher(uri, exchange string) (*DefaultJobUpdatePublis
 }
 
 // PublishJobUpdate simply forwards the function call to messaging.Client.PublishJobUpdate.
-func (c *DefaultJobUpdatePublisher) PublishJobUpdate(m *messaging.UpdateMessage) error {
-	return c.client.PublishJobUpdate(m)
+func (c *DefaultJobUpdatePublisher) PublishJobUpdate(ctx context.Context, m *messaging.UpdateMessage) error {
+	return c.client.PublishJobUpdateContext(ctx, m)
 }
 
 // Reconnect closes the existing messaging client connection and establishes a new one.
