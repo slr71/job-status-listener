@@ -5,8 +5,8 @@ go 1.16
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9
-	github.com/cyverse-de/messaging/v9 v9.1.1
-	github.com/cyverse-de/model v0.0.0-20211027151045-62de96618208
+	github.com/cyverse-de/messaging/v9 v9.1.3
+	github.com/cyverse-de/model/v6 v6.0.1
 	github.com/gorilla/mux v1.8.0
 	github.com/sirupsen/logrus v1.2.0
 	github.com/spf13/viper v1.4.0

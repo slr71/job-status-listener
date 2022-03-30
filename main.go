@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/cyverse-de/configurate"
-	"github.com/cyverse-de/model"
+	"github.com/cyverse-de/model/v6"
 	"github.com/spf13/viper"
 
 	"github.com/gorilla/mux"
