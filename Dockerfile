@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine
+FROM golang:1.21
 
 COPY . /go/src/github.com/cyverse-de/job-status-listener
 WORKDIR /go/src/github.com/cyverse-de/job-status-listener

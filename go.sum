@@ -17,8 +17,6 @@ github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e/go.mod h1:F5haX7
 github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f/go.mod h1:E3G3o1h8I7cfcXa63jLwjI0eiQQMgzzUDFVpN/nH/eA=
 github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9 h1:GXDamvpoo7b4k+cEk8ZA06HhHnz86wiJod5Q3zZO9Tg=
 github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9/go.mod h1:QMZ4G8bX5f0vKiH9+/2JqV687mN1byJ18tjZwIJIagI=
-github.com/cyverse-de/go-mod/otelutils v0.0.1 h1:DAkj2tn8umxM7j9+zokrsQK/q5HTWQT8YjuE1+4xruE=
-github.com/cyverse-de/go-mod/otelutils v0.0.1/go.mod h1:8P2jRGnvUsH4qtyVP0W6KiV5iSr102pLkzKFgkYJ4og=
 github.com/cyverse-de/go-mod/otelutils v0.0.2 h1:7O3jWQgf+PIIACSwtQM5SNtn6xTxxaLIUW6kjEKUpHM=
 github.com/cyverse-de/go-mod/otelutils v0.0.2/go.mod h1:8P2jRGnvUsH4qtyVP0W6KiV5iSr102pLkzKFgkYJ4og=
 github.com/cyverse-de/messaging/v9 v9.1.3 h1:bfLi4ye9h4hgqIA8KhK2rLfqI62PqBHANMMVyoTKuHA=
@@ -169,7 +167,6 @@ golang.org/x/sys v0.0.0-20181107165924-66b7b1311ac8/go.mod h1:STP8DvDyc/dI5b8T5h
 golang.org/x/sys v0.0.0-20181116152217-5ac8a444bdc5/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20191009170203-06d7bd2c5f4f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20210423185535-09eb48e85fd7 h1:iGu644GcxtEcrInvDsQRCwJjtCIOlT2V7IRt6ah2Whw=
 golang.org/x/sys v0.0.0-20210423185535-09eb48e85fd7/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20220403205710-6acee93ad0eb h1:PVGECzEo9Y3uOidtkHGdd347NjLtITfJFO9BxFpmRoo=
 golang.org/x/sys v0.0.0-20220403205710-6acee93ad0eb/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
