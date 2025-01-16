@@ -78,6 +78,17 @@ type MessagePost struct {
 	State    string
 }
 
+// MessagePostWithUUIDs describes the job status update sent from the new batch
+// analysis execution system. It differentiates between the job UUID and the analysis
+// UUID and contains both in the body of the request rather than in the URL.
+type MessagePostWithUUIDs struct {
+	JobUUID      string `json:"job_uuid"`
+	AnalysisUUID string `json:"analysis_uuid"`
+	Hostname     string
+	Message      string
+	State        string
+}
+
 func getState(state string) (messaging.JobState, error) {
 	switch strings.ToLower(state) {
 	case "submitted":
@@ -93,6 +104,55 @@ func getState(state string) (messaging.JobState, error) {
 	default:
 		return "", fmt.Errorf("Unknown job state: %s", state)
 	}
+}
+
+func postBatchStatus(publisher JobUpdatePublisher, w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	out := json.NewEncoder(w)
+
+	var updateMessage MessagePostWithUUIDs
+
+	err := json.NewDecoder(r.Body).Decode(&updateMessage)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Error(err)
+		_ = out.Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	jobID := updateMessage.JobUUID
+
+	state, err := getState(updateMessage.State)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Error(err)
+		_ = out.Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	log.Infof("batch analysis => job id: '%s', analysis id: '%s', state: '%s', hostname: '%s', message :'%s'",
+		jobID,
+		updateMessage.AnalysisUUID,
+		state,
+		updateMessage.Hostname,
+		updateMessage.Message,
+	)
+
+	msg, err := update(ctx, publisher, state, jobID, updateMessage.Hostname, updateMessage.Message)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Error(err)
+		_ = out.Encode(map[string]string{
+			"error": err.Error(),
+		})
+		log.Fatal("failed to record a valid job status update - aborting")
+	}
+	_ = out.Encode(msg)
 }
 
 func postUpdate(publisher JobUpdatePublisher, w http.ResponseWriter, r *http.Request) {
@@ -157,6 +217,11 @@ func newRouter(publisher JobUpdatePublisher) *mux.Router {
 	r.Path("/{uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/status").Methods("POST").HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			postUpdate(publisher, w, r)
+		},
+	)
+	r.Path("/status/batch").Methods("POST").HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			postBatchStatus(publisher, w, r)
 		},
 	)
 
