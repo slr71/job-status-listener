@@ -82,11 +82,10 @@ type MessagePost struct {
 // analysis execution system. It differentiates between the job UUID and the analysis
 // UUID and contains both in the body of the request rather than in the URL.
 type MessagePostWithUUIDs struct {
-	JobUUID      string `json:"job_uuid"`
-	AnalysisUUID string `json:"analysis_uuid"`
-	Hostname     string
-	Message      string
-	State        string
+	JobUUID  string `json:"job_uuid"`
+	Hostname string
+	Message  string
+	State    string
 }
 
 func getState(state string) (messaging.JobState, error) {
@@ -135,9 +134,8 @@ func postBatchStatus(publisher JobUpdatePublisher, w http.ResponseWriter, r *htt
 		return
 	}
 
-	log.Infof("batch analysis => job id: '%s', analysis id: '%s', state: '%s', hostname: '%s', message :'%s'",
+	log.Infof("batch analysis => job id: '%s', state: '%s', hostname: '%s', message :'%s'",
 		jobID,
-		updateMessage.AnalysisUUID,
 		state,
 		updateMessage.Hostname,
 		updateMessage.Message,
